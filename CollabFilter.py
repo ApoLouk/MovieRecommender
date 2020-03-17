@@ -87,7 +87,13 @@ def predict_user_item(df, n_users, n_items):
     # print(item_similarity[:4, :4])
 
     item_prediction = predict_fast_simple(ratings, item_similarity, kind='item')
-    return item_prediction
+    minimum = item_prediction.min(axis=1, keepdims=True)
+    initialSpan = item_prediction.max(axis=1, keepdims=True) - minimum
+    finalSpan = 5
+
+    valueScaled = (item_prediction - minimum) / initialSpan
+    final_rankings = valueScaled * finalSpan
+    return item_prediction, final_rankings
 
 
 
@@ -140,7 +146,7 @@ if __name__ == '__main__':
 
     #Calculate user-item ratings matrix R
 
-    item_prediction = predict_user_item(df_ratings_filtered, n_users, n_items)
+    item_prediction, final_rankings = predict_user_item(df_ratings_filtered, n_users, n_items)
     best_movies_index = np.argsort(item_prediction, axis=1)
 
 

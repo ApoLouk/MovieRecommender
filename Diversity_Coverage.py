@@ -28,6 +28,7 @@ def calculate_coverage(recom_array, df_movies):
         else:
             category_coverage_dict[row.category] = 0
 
+    print('Mean Coverage', np.mean(np.array(list(category_coverage_dict.values()))))
     print("The coverage of each category was:")
     for category in category_coverage_dict:
         print(category, ": ", category_coverage_dict[category])
@@ -38,7 +39,6 @@ def calculate_coverage(recom_array, df_movies):
 def calculate_diversity(df, n_users, n_items, recom_array, df_movies, coverage):
     def get_user_dissimilarity(x, dis_arrray):
         return dis_arrray[x[0]][x[1]]
-
 
     ratings = np.zeros((n_users, n_items))
     for row in df.itertuples():
@@ -67,6 +67,7 @@ def calculate_diversity(df, n_users, n_items, recom_array, df_movies, coverage):
             category_diversity_dict[row.category] = 0
 
     print("")
+    print('Mean Diversity', np.mean(np.array(list(category_diversity_dict.values()))))
     print("The diversity of each category was:")
     for category in category_diversity_dict:
         print(category, ": ", category_diversity_dict[category])
@@ -75,8 +76,8 @@ def calculate_diversity(df, n_users, n_items, recom_array, df_movies, coverage):
 
 if __name__ == '__main__':
     LIST_LENGHT = 5
-    KC = 0.03
-    NUMBER_OF_CATEGORIES = 20
+    KC = 0.15
+    NUMBER_OF_CATEGORIES = 10
 
     data_path = os.getcwd() + '/ml-latest-small/'
     # configure file path
@@ -106,7 +107,7 @@ if __name__ == '__main__':
 
     #Calculate user-item ratings matrix R
 
-    item_prediction = predict_user_item(df_ratings_filtered, n_users, n_items)
+    item_prediction, final_rankings = predict_user_item(df_ratings_filtered, n_users, n_items)
     best_movies_index = np.argsort(item_prediction, axis=1)
 
     baseline_list = get_recommendation_list(LIST_LENGHT, best_movies_index, df_ratings_filtered)
