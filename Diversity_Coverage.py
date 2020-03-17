@@ -2,7 +2,7 @@ import pandas as pd
 import os
 import numpy as np
 
-from CollabFilter import filter_data, predict_user_item, new_movie_id, get_recommendation_list, similarity
+from CollabFilter import filter_data, predict_user_item, new_id, get_recommendation_list, similarity
 from dataset_setup import setup_data
 
 def calculate_coverage(recom_array, df_movies):
@@ -21,13 +21,16 @@ def calculate_coverage(recom_array, df_movies):
             #Check if it is recommended at all
             if index in movie_recom_dict:
                 #If it is add to category list
-                category_list.append(movie_recom_dict[row.newId])
+                category_list.append(movie_recom_dict[row.newMovieId])
         #If at least one movie was recommended
         if category_list:
             category_coverage_dict[row.category_name] = sum(category_list) / category_items
         else:
             category_coverage_dict[row.category_name] = 0
 
+    print("The coverage of each category was:")
+    for category in category_coverage_dict:
+        print(category, ": ", category_coverage_dict[category])
 
     return category_coverage_dict
 
@@ -38,8 +41,7 @@ def calculate_diversity(df, n_users, n_items, recom_array, df_movies, coverage):
 
     ratings = np.zeros((n_users, n_items))
     for row in df.itertuples():
-        ratings[row.userId - 1, row.newId - 1] = row[3]
-    print(ratings)
+        ratings[row.newUserId - 1, row.newMovieId - 1] = row[3]
 
     user_similarity = 1 - similarity(ratings, kind='user')
 
@@ -57,17 +59,64 @@ def calculate_diversity(df, n_users, n_items, recom_array, df_movies, coverage):
                 dissimilarity_per_user_duo = np.apply_along_axis(get_user_dissimilarity, 1, user_grid, user_similarity)
                 category_list.append(np.sum(dissimilarity_per_user_duo))
 
+
         if category_list:
+            test = sum(category_list)
             normalisation_factor = (coverage[row.category_name] * category_items * (coverage[row.category_name] * category_items - 1))
             category_diversity_dict[row.category_name] = 2 * sum(category_list) / (category_items * normalisation_factor)
         else:
             category_diversity_dict[row.category_name] = 0
 
+    print("")
+    print("The diversity of each category was:")
+    for category in category_diversity_dict:
+        print(category, ": ", category_diversity_dict[category])
+
+    return category_diversity_dict
+
+def new_calculate_diversity(df, n_users, n_items, recom_array, df_movies, coverage):
+    def get_user_dissimilarity(x, dis_arrray):
+        return dis_arrray[x[0]][x[1]]
+
+
+    ratings = np.zeros((n_users, n_items))
+    for row in df.itertuples():
+        ratings[row.userId - 1, row.newMovieId - 1] = row[3]
+
+    user_dissimilarity = 1 - similarity(ratings, kind='user')
+
+    grouped = df_movies.groupby('category')
+    category_diversity_dict = {}
+    for group_num, group in grouped:
+        # Calculate Ic
+        category_items = len(group.index)
+        category_list = []
+        # for each movie
+        for index, row in group.iterrows():
+            users, _ = np.where(recom_array == index)
+            if users.size > 0:
+                user_grid = np.array(np.meshgrid(users,users)).T.reshape(-1,2)
+                dissimilarity_per_user_duo = np.apply_along_axis(get_user_dissimilarity, 1, user_grid, user_dissimilarity)
+                category_list.append(np.sum(dissimilarity_per_user_duo))
+
+        if category_list:
+            normalisation_factor = (coverage * category_items * (coverage * category_items - 1))
+            category_diversity_dict[row.category_name] = 2 * sum(category_list) / (category_items * normalisation_factor)
+        else:
+            category_diversity_dict[row.category_name] = 0
+
+    print("")
+    print("The diversity of each category was:")
+    for category in category_diversity_dict:
+        print(category, ": ", category_diversity_dict[category])
 
     return category_diversity_dict
 
 if __name__ == '__main__':
-    LIST_LENGHT = 10
+    LIST_LENGHT = 5
+    KC = 0.03
+
+
     data_path = os.getcwd() + '/ml-latest-small/'
     # configure file path
     movies_filename = 'movies.csv'
@@ -78,7 +127,7 @@ if __name__ == '__main__':
 
     #Cleaning Dataset
 
-    df_ratings_filtered = filter_data(df_ratings, 5, 5)
+    df_ratings_filtered = filter_data(df_ratings, 20, 20)
 
     n_users = df_ratings_filtered.userId.unique().shape[0]
     n_items = df_ratings_filtered.movieId.unique().shape[0]
@@ -86,10 +135,13 @@ if __name__ == '__main__':
     print(str(n_items) + ' items')
 
     unique_movie_id = df_ratings_filtered.movieId.unique()
-    df_ratings_filtered['newId'] = df_ratings_filtered['movieId'].apply(new_movie_id, args=(unique_movie_id,))
+    unique_user_id = df_ratings_filtered.userId.unique()
+    df_ratings_filtered['newMovieId'] = df_ratings_filtered['movieId'].apply(new_id, args=(unique_movie_id,))
+
+    df_ratings_filtered['newUserId'] = df_ratings_filtered['userId'].apply(new_id, args=(unique_user_id,))
 
     # Setup new id [0, n_items] because movieIds have blank spaces
-    df_movies['newId'] = df_movies.index
+    df_movies['newMovieId'] = df_movies.index
 
     #Calculate user-item ratings matrix R
 
@@ -101,14 +153,11 @@ if __name__ == '__main__':
     #Coverage calculation
     coverage_dict = calculate_coverage(baseline_list, df_movies)
 
-    print("The coverage of each category was:")
-    for category in coverage_dict:
-        print(category, ": ", coverage_dict[category])
+
 
     # Diversity calculation
 
     diversity_dict = calculate_diversity(df_ratings_filtered, n_users, n_items, baseline_list, df_movies, coverage_dict)
 
-    print("The diversity of each category was:")
-    for category in diversity_dict:
-        print(category, ": ", diversity_dict[category])
+    # diversity_dict = new_calculate_diversity(df_ratings_filtered, n_users, n_items, baseline_list, df_movies, KC)
+

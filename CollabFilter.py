@@ -18,8 +18,8 @@ def train_test_split(ratings):
     assert (np.all((train * test) == 0))
     return train, test
 
-def new_movie_id(x, unique_movie_id):
-    new = np.where(unique_movie_id == x)
+def new_id(x, unique_id):
+    new = np.where(unique_id == x)
     return new[0][0]
 
 def slow_similarity(ratings, kind='user'):
@@ -30,7 +30,7 @@ def slow_similarity(ratings, kind='user'):
         axmax = 0
         axmin = 1
     sim = np.zeros((ratings.shape[axmax], ratings.shape[axmax]))
-    print(ratings.shape[axmax])
+    # print(ratings.shape[axmax])
     for u in range(ratings.shape[axmax]):
         for uprime in range(ratings.shape[axmax]):
             rui_sqrd = 0.
@@ -80,11 +80,11 @@ def predict_user_item(df, n_users, n_items):
 
     ratings = np.zeros((n_users, n_items))
     for row in df.itertuples():
-        ratings[row.userId - 1, row.newId - 1] = row[3]
-    print(ratings)
+        ratings[row.newUserId - 1, row.newMovieId - 1] = row[3]
+    # print(ratings)
 
     item_similarity = similarity(ratings, kind='item')
-    print(item_similarity[:4, :4])
+    # print(item_similarity[:4, :4])
 
     item_prediction = predict_fast_simple(ratings, item_similarity, kind='item')
     return item_prediction
@@ -99,8 +99,8 @@ def get_recommendation_list(list_lenght, best_movies_index, df_ratings_filtered)
         recommendation_list = []
         user += 1
         for movie in reversed(cell):
-            if df_ratings_filtered[(df_ratings_filtered['userId'] == user)
-                                       & (df_ratings_filtered['newId'] == movie)].empty:
+            if df_ratings_filtered[(df_ratings_filtered['newUserId'] == user)
+                                       & (df_ratings_filtered['newMovieId'] == movie)].empty:
                 if len(recommendation_list) < list_lenght:
                     recommendation_list.append(movie)
                 else:
@@ -135,7 +135,7 @@ if __name__ == '__main__':
 
     #Setup new id [0, n_items] because movieIds have blank spaces
     unique_movie_id = df_ratings_filtered.movieId.unique()
-    df_ratings_filtered['newId'] = df_ratings_filtered['movieId'].apply(new_movie_id, args=(unique_movie_id,))
+    df_ratings_filtered['newId'] = df_ratings_filtered['movieId'].apply(new_id, args=(unique_movie_id,))
 
 
     #Calculate user-item ratings matrix R
