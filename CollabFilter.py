@@ -52,7 +52,7 @@ def similarity(ratings, kind='user', epsilon=1e-9):
     return (sim / norms / norms.T)
 
 
-def predict_fast_simple(ratings, similarity, kind='user'):
+def predict_ratings(ratings, similarity, kind='user'):
     if kind == 'user':
         return similarity.dot(ratings) / np.array([np.abs(similarity).sum(axis=1)]).T
     elif kind == 'item':
@@ -86,7 +86,7 @@ def predict_user_item(df, n_users, n_items):
     item_similarity = similarity(ratings, kind='item')
     # print(item_similarity[:4, :4])
 
-    item_prediction = predict_fast_simple(ratings, item_similarity, kind='item')
+    item_prediction = predict_ratings(ratings, item_similarity, kind='item')
     minimum = item_prediction.min(axis=1, keepdims=True)
     initialSpan = item_prediction.max(axis=1, keepdims=True) - minimum
     finalSpan = 5
@@ -121,33 +121,38 @@ def get_recommendation_list(list_lenght, best_movies_index, df_ratings_filtered)
 
 if __name__ == '__main__':
     LIST_LENGHT = 5
+    KC = 0.15
+    NUMBER_OF_CATEGORIES = 10
+
     data_path = os.getcwd() + '/ml-latest-small/'
     # configure file path
     movies_filename = 'movies.csv'
-    ratings_filename = 'ratings.csv'# read data
+    ratings_filename = 'ratings.csv'  # read data
 
-    #Data Setup
-    df_ratings, df_movies = setup_data(data_path, movies_filename, ratings_filename)
+    # Data Setup
+    df_ratings, df_movies = setup_data(data_path, movies_filename, ratings_filename, NUMBER_OF_CATEGORIES)
 
-    #Cleaning Dataset
+    # Cleaning Dataset
 
-    df_ratings_filtered = filter_data(df_ratings, 5, 5)
+    df_ratings_filtered = filter_data(df_ratings, 15, 15)
 
-    #Calculate unique users and items
     n_users = df_ratings_filtered.userId.unique().shape[0]
     n_items = df_ratings_filtered.movieId.unique().shape[0]
     print(str(n_users) + ' users')
     print(str(n_items) + ' items')
 
-    #Setup new id [0, n_items] because movieIds have blank spaces
     unique_movie_id = df_ratings_filtered.movieId.unique()
-    df_ratings_filtered['newId'] = df_ratings_filtered['movieId'].apply(new_id, args=(unique_movie_id,))
+    unique_user_id = df_ratings_filtered.userId.unique()
+    df_ratings_filtered['newMovieId'] = df_ratings_filtered['movieId'].apply(new_id, args=(unique_movie_id,))
 
+    df_ratings_filtered['newUserId'] = df_ratings_filtered['userId'].apply(new_id, args=(unique_user_id,))
 
-    #Calculate user-item ratings matrix R
+    # Setup new id [0, n_items] because movieIds have blank spaces
+    df_movies['newMovieId'] = df_movies.index
+
+    # Calculate user-item ratings matrix R
 
     item_prediction, final_rankings = predict_user_item(df_ratings_filtered, n_users, n_items)
     best_movies_index = np.argsort(item_prediction, axis=1)
-
 
     baseline_list = get_recommendation_list(LIST_LENGHT, best_movies_index, df_ratings_filtered)

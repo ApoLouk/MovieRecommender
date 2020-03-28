@@ -77,6 +77,7 @@ if __name__ == '__main__':
 
     possible_changes = np.arange(20)
 
-    new_list = permutate_list(baseline_list, possible_changes, noise_factor=0.05)
+    new_list = permutate_list(baseline_list, possible_changes, noise_factor=0.95)
 
     cost = cost_calculation(baseline_list, new_list, final_rankings, baseline_score, LIST_LENGHT)
+

@@ -28,23 +28,18 @@ def calculate_coverage(recom_array, df_movies):
         else:
             category_coverage_dict[row.category] = 0
 
-    print('Mean Coverage', np.mean(np.array(list(category_coverage_dict.values()))))
-    print("The coverage of each category was:")
-    for category in category_coverage_dict:
-        print(category, ": ", category_coverage_dict[category])
 
+    # print("The coverage of each category was:")
+    # for category in category_coverage_dict:
+    #     print(category, ": ", category_coverage_dict[category])
+    print('Mean Coverage', np.mean(np.array(list(category_coverage_dict.values()))))
     return category_coverage_dict
 
 
-def calculate_diversity(df, n_users, n_items, recom_array, df_movies, coverage):
-    def get_user_dissimilarity(x, dis_arrray):
-        return dis_arrray[x[0]][x[1]]
+def get_user_dissimilarity(x, dis_arrray):
+    return dis_arrray[x[0]][x[1]]
 
-    ratings = np.zeros((n_users, n_items))
-    for row in df.itertuples():
-        ratings[row.newUserId - 1, row.newMovieId - 1] = row[3]
-
-    user_dissimilarity = 1 - similarity(ratings, kind='user')
+def calculate_diversity(recom_array, df_movies, coverage, user_dissimilarity):
 
     grouped = df_movies.groupby('category')
     category_diversity_dict = {}
@@ -67,11 +62,10 @@ def calculate_diversity(df, n_users, n_items, recom_array, df_movies, coverage):
             category_diversity_dict[row.category] = 0
 
     print("")
+    # print("The diversity of each category was:")
+    # for category in category_diversity_dict:
+    #     print(category, ": ", category_diversity_dict[category])
     print('Mean Diversity', np.mean(np.array(list(category_diversity_dict.values()))))
-    print("The diversity of each category was:")
-    for category in category_diversity_dict:
-        print(category, ": ", category_diversity_dict[category])
-
     return category_diversity_dict
 
 if __name__ == '__main__':
@@ -117,7 +111,12 @@ if __name__ == '__main__':
 
 
 
-    # Diversity calculation
 
-    diversity_dict = calculate_diversity(df_ratings_filtered, n_users, n_items, baseline_list, df_movies, KC)
+    #Calculating Dissimilarity
+    ratings = np.zeros((n_users, n_items))
+    for row in df_ratings_filtered.itertuples():
+        ratings[row.newUserId - 1, row.newMovieId - 1] = row[3]
+    user_dissimilarity = 1 - similarity(ratings, kind='user')
+    # Diversity calculation
+    diversity_dict = calculate_diversity(baseline_list, df_movies, KC, user_dissimilarity)
 
